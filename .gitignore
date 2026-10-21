@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Matplotlib cache
+.mplconfig/
+
+# Output directories
+results/
+
+# OS specific files
+.DS_Store
+Thumbs.db

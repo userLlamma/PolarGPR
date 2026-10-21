@@ -1,0 +1,22 @@
+# GPR Reflection Enhancer Default Configuration
+
+signal_processing:
+  background_subtraction: true
+  svd_clutter_filter: false
+  num_svd_components_to_drop: 1
+  percentile_normalization: 98.0
+  pad_multiple: 32
+
+inference:
+  model_path: "weights/gpr_core_v110.onnx"
+  preferred_providers:
+    - "CUDAExecutionProvider"
+    - "CoreMLExecutionProvider"
+    - "CPUExecutionProvider"
+  dynamic_batching: true
+
+visualization:
+  cmap_raw: "gray"
+  cmap_wavefront: "seismic"
+  cmap_skeleton: "seismic"
+  dpi: 160

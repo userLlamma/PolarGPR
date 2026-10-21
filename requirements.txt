@@ -1,0 +1,15 @@
+# Core Runtime & Scientific Stack
+numpy>=1.22.0
+scipy>=1.9.0
+matplotlib>=3.5.0
+onnxruntime>=1.15.0
+
+# Geophysical I/O Support
+segyio>=1.9.0
+
+# Interactive Web UI & Configs
+streamlit>=1.25.0
+pyyaml>=6.0
+
+# Optional: PyTorch (Only required for training or architectural inspection)
+# torch>=2.0.0
