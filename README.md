@@ -87,9 +87,15 @@ The architecture bridges the gap between **analytical wavefield physics** and **
 * **Background Trace Subtraction**: Eliminates direct coupling waves via cross-profile mean-trace deduction: $\tilde{s}(t, x) = s(t, x) - \frac{1}{N} \sum_{i=1}^N s(t, x_i)$.
 * **Optional SVD Rank-1 Clutter Filter**: Separates stationary horizontal noise from dipping stratigraphic horizons.
 * **Robust Percentile AGC**: 98th-percentile envelope clipping to avoid saturation from near-surface anomalies.
-* **Hilbert Analytic Transform**: Derives complex analytic wavefields $z(t) = s(t) + i\mathcal{H}[s(t)]$ to extract instantaneous amplitude $A(t) = |z(t)|$ and instantaneous phase $\phi(t) = \text{atan2}(z_i, z_r)$.
+* **Hilbert Analytic Transform & Phase Analysis (Tackling Massive Dynamic Range)**:
+  * *The Challenge*: GPR signals undergo severe path attenuation and dispersion, creating an extreme dynamic range where near-surface direct waves are orders of magnitude stronger than deep reflection events. Conventional CNNs trained directly on raw amplitudes tend to have their gradients dominated by shallow features, while faint deep reflections are easily suppressed.
+  * *The Phase Solution*: By taking the Hilbert transform along the depth/time axis, we form the analytic signal $z(t) = s(t) + i\mathcal{H}[s(t)] = A(t)e^{i\phi(t)}$. Crucially, we decompose this into:
+    * **Unit Phasors**: $\frac{z_r(t)}{A(t)} = \cos\phi(t)$ and $\frac{z_i(t)}{A(t)} = \sin\phi(t)$, which normalize signal energy to unity everywhere while preserving precise phase orientation.
+    * **Instantaneous Frequency**: $\omega(t) = \frac{d\phi}{dt}$ tracking local wavelet oscillations.
+  * *The Impact*: This shifts the network's attention away from depth-dependent absolute amplitude scales toward **localized phase singularities (wavefield sign inversions at dielectric contacts) and lateral spatial coherence**.
 
 ### 2. 2D Spatial Dilated Convolution Engine (`core/detector_2d.py`)
+* **Phase-Driven Stage 2 Input**: Stage 2 directly ingests the normalized phasor channels $[\cos\phi, \sin\phi]$ coupled with Stage 1's preliminary polarity probabilities, ensuring feature extraction is inherently invariant to overall signal decay.
 * **Dual-Channel Polarity Separation**: The network separately predicts probabilities for:
   * **Positive Phase ($+$)**: Transitions from high to low dielectric constant (e.g., void ceilings, dry bedrock boundaries).
   * **Negative Phase ($-$)**: Transitions from low to high dielectric constant (e.g., metal utilities, water-filled anomalies, wet clay beds).
@@ -215,6 +221,7 @@ We warmly welcome geophysicists and radar practitioners to share their domain in
 后来通过人工观察大量实测 B-scan 剖面，从波动信号的直觉出发，作者感到地下反射双曲线与波前干涉在几何形态上非常类似于**“水面波纹的相干叠加”**。受此启发，作者抛弃了沉重的网格差分全波求解，转而采用基于**惠更斯原理（Huygens Principle）走时双曲线叠加与子波褶积的向量化简化仿真**。这种近似将单张剖面的生成时间从数十分钟缩短至**几毫秒**，从而奠定了“边生成边训练、数小时收敛”的基石。
 
 **本项目的核心工程价值不在于追求虚幻的“通用超大模型”，而在于实现极度敏捷的“轻量化快速定制、训练与边缘部署闭环”**：
+* **Hilbert 变换对抗巨大动态范围**：实测 GPR 剖面的动态范围往往跨越数个数量级（浅层天线直达波与地表强反射极其剧烈，而深层弱回波经过介质吸收和扩散后衰减严重）。如果直接把原始幅度喂给卷积网络，网络权重和损失梯度极易被浅层强能量绑架，深层弱信号直接被淹没。因此，算法通过沿时间/深度轴做 Hilbert 变换构造解析信号 $z(t) = s(t) + i\mathcal{H}[s(t)] = A(t)e^{i\phi(t)}$，并在进入 Stage 2 时除以瞬时振幅 $A(t)$，提取出单位相量 $(\cos\phi, \sin\phi) = (z_r/A, z_i/A)$。这在数学上完全剥离了随深度指数衰减的全局绝对能量尺度，让网络**将注意力从绝对振幅转移到介质边界处的“局部相位跳变”与横向测线上的“波前相干性”**。
 * **向量化惠更斯在线仿真（On-the-Fly Physics）**：彻底摆脱了预先离线生成几十 GB 庞大数据集的负担。在内存中通过多进程实时合成无限变化的地下波场流，边仿真边训练，网络永不重复学习死数据。
 * **低成本快速收敛**：在普通的消费级设备（如 **Mac mini M2, 24GB**）上，利用统一内存与 GPU/MPS 加速，**仅需几个小时即可完成训练收敛**。
 * **参数逼近原则**：仿真参数（时间步长 `dt`、中心频率 `freq`、道间距 `dx`）需要尽量逼近实际测区工况。模型对参数具备合理的宽容度，但若物理尺度严重失配（如波长或双曲线曲率相差一个数量级），可能导致重构异常。针对具体勘探频段快速微调并轻量化部署，远比纸上谈兵的通用性更具工程落地价值。
