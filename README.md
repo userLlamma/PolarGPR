@@ -129,14 +129,14 @@ pip install -r requirements.txt
 ```
 
 ### 2. Run Single-File Demo
-Process an included high-contrast profile or core patch:
+Process an included high-contrast profile:
 
 ```bash
-# Fast run on high-contrast sample profile (image or npy)
-python demo.py --input data/sample/sample_bscan.png --output_dir results
+# Fast run on sample B-scan array (.npy)
+python demo.py --input data/sample/sample_bscan.npy --output_dir results
 
-# Or run on the 512x600 core patch (~300ms)
-python demo.py --input data/sample/sample_patch_512x600.npy --output_dir results
+# Or directly process raw SEG-Y (.sgy) radargram (~400ms)
+python demo.py --input data/sample/sample_bscan.sgy --output_dir results
 ```
 Outputs:
 * `results/<name>_comparison.png`: 3-panel comparative diagnosis plot.
@@ -178,7 +178,7 @@ gpr-reflection-enhancer/
 │   ├── detector_2d.py       # ONNX Runtime 2D inference engine & signed polarity synthesis
 │   └── model_torch.py       # PyTorch reference implementation of two-stage architecture
 ├── data/
-│   └── sample/              # Sanitized benchmark profile & core patches (.png, .npy)
+│   └── sample/              # Sanitized benchmark profile (.sgy, .npy)
 ├── weights/
 │   └── gpr_core_v110.onnx   # Production pre-trained ONNX model weight (~3 MB)
 ├── app.py                   # Streamlit web application for interactive analysis

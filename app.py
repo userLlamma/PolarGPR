@@ -55,7 +55,7 @@ uploaded_file = st.sidebar.file_uploader(
 # Default to bundled sample if no upload
 sample_choice = st.sidebar.selectbox(
     "Or select a sample:",
-    ["Sample Profile (.png)", "Sample Profile (.npy)", "Core Patch 512x600 (.npy)"],
+    ["Sample B-scan (.npy)", "Sample B-scan (.sgy)"],
 )
 
 data = None
@@ -73,12 +73,10 @@ if uploaded_file is not None:
             os.remove(tmp_path)
 else:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    if sample_choice == "Sample Profile (.png)":
-        s_path = os.path.join(base_dir, "data", "sample", "sample_bscan.png")
-    elif sample_choice == "Sample Profile (.npy)":
+    if sample_choice == "Sample B-scan (.npy)":
         s_path = os.path.join(base_dir, "data", "sample", "sample_bscan.npy")
     else:
-        s_path = os.path.join(base_dir, "data", "sample", "sample_patch_512x600.npy")
+        s_path = os.path.join(base_dir, "data", "sample", "sample_bscan.sgy")
     filename = os.path.basename(s_path)
     data = load_bscan_file(s_path)
 
