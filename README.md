@@ -28,9 +28,9 @@ Rather than pursuing an elusive "one-size-fits-all universal model," the core go
 During the exploratory phase, I initially tried full-wave numerical solvers like **gprMax**. However, FDTD differential solvers proved far too slow—synthesizing even a modest dataset took days or weeks. 
 
 While visually inspecting B-scan radargrams, an intuition emerged: the macroscopic hyperbolic events, diffraction tails, and interference patterns strongly resembled **ripples propagating and interfering on a water surface**. Guided by this acoustic analogy, I built a simplified, vectorized **Huygens principle propagator** that directly simulates three core physical elements:
-1. **Wavefront Superposition (波场干涉叠加)**: Simulating complex undulating layer interfaces and boundary interference.
-2. **Diffraction Hyperbolas (绕射与散射双曲线)**: Accurately modeling travel-time hyperbola geometry ($t = \sqrt{t_0^2 + 4x^2/v^2}$).
-3. **Trailing Coda Waves (主反射后的余波/振铃拖尾)**: Reproducing the variable-length oscillating reverberations that follow the primary reflection.
+1. **Wavefront Superposition**: Simulating complex undulating layer interfaces and boundary interference.
+2. **Diffraction Hyperbolas**: Accurately modeling travel-time hyperbola geometry ($t = \sqrt{t_0^2 + 4x^2/v^2}$).
+3. **Trailing Coda Waves**: Reproducing the variable-length oscillating reverberations that follow the primary reflection.
 
 This reduced synthesis time from hours to milliseconds, enabling real-time on-the-fly streaming directly into PyTorch without caching static datasets.
 
