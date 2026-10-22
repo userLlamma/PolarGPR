@@ -21,7 +21,7 @@
 > *"An exploratory attempt by a signal processing developer to reconstruct low-SNR radar reflections, open-sourced for community reference and feedback."*
 
 ### 1. Project Origins & The Intuition Behind the Simulation
-I am a developer with a background in audio, array signal processing, and neural network application engineering—**not a trained geophysicist**. A few months ago, a contact shared several sets of legacy, low-SNR Ground Penetrating Radar (GPR) profiles to explore potential collaboration. Intrigued by the challenge, I approached GPR B-scans from a wavefield signal perspective: combining classical 1D analytic signal physics (Hilbert transform, dynamic range AGC, common-mode removal) with a 2D dilated convolutional architecture to recover weak, continuous reflection horizons.
+I am a developer with a background in audio, array signal processing, and neural network application engineering—**not a trained geophysicist**. A few months ago, a contact shared a challenging set of water radar profiles from a **lake survey plagued by heavy multi-path ringing and reverberation** to explore potential collaboration. In such aquatic surveys, extreme dielectric contrasts between water, water-bottom sediment, and bedrock cause severe multiple reflections (ringing bands) that mask true structural horizons. Intrigued by the challenge of pulling genuine reflection layers out of heavy ringing clutter, I approached GPR B-scans from an acoustic wavefield perspective.
 
 During the exploratory phase, I initially tried using standard FDTD numerical tools like **gprMax**. However, full Maxwell-equation solvers proved far too computationally expensive—generating even a modest training set would take days or weeks. 
 
@@ -107,6 +107,26 @@ The architecture bridges the gap between **analytical wavefield physics** and **
 * **On-the-Fly Physics Streaming**: Training samples are synthesized dynamically in memory during data loading. There is zero disk I/O bottleneck, and the network never encounters the exact same profile twice.
 * **Rapid Convergence on Consumer Hardware**: Tested on a standard **Mac mini (M2, 24GB)**, the entire two-stage network **converges within just a few hours**.
 * **Parameter Alignment**: The synthetic propagator should be configured to approximate target field parameters (notably sampling interval `dt`, center frequency, and trace spacing `dx`). While the model has reasonable tolerance to variations, a severe scale mismatch (e.g., an order-of-magnitude difference in wavelet period or hyperbolic curvature) can impair reconstruction. The true practical value lies in **fast, customized turnaround and lightweight deployment**, rather than an all-in-one universal model.
+
+### 4. 🏕️ Practical In-Situ Field Work Workflow
+This architecture is intentionally tailored for field geophysicists and utility surveyors:
+1. **Daytime Acquisition**: Collect your survey lines. Note down antenna center frequency ($f_c$), temporal sampling interval ($dt$), and spatial trace spacing ($dx$).
+2. **Evening Training on a Laptop / Mac mini**: Spin up `train.py` on a portable machine with your survey's physical parameters. Because the simulation streams in memory, the model converges in **2–3 hours** without needing an enterprise GPU cluster.
+3. **In-Situ Next-Day Enhancement**: Feed the raw B-scans into `demo.py` or `app.py` (<500ms per line) to visualize clean reflection horizons and inform next-day drilling or trenching decisions.
+
+---
+
+## 🔧 Where to Customize Simulation Parameters
+
+You can adjust the simulation parameters to match your antenna and geology either via **CLI arguments** or **directly in code**:
+
+| Parameter | Meaning & Geological Context | Common Values | CLI Argument (`train.py`) | In-Code Location (`train.py`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **`dt`** | Temporal sampling interval | `1.0e-9` (1 ns), `2.0e-9` (2 ns) | `--dt 2.0e-9` | `SyntheticGPRGenerator.__init__` line ~94 |
+| **`freq`** | Antenna center frequency | `100e6` (100 MHz), `500e6` (500 MHz) | `--freq 100e6` | `SyntheticGPRGenerator.__init__` line ~94 |
+| **`dx`** | Trace spatial spacing (survey step) | `0.05` (5 cm), `0.2` (20 cm), `1.0` (1 m) | `--dx 0.05` | `SyntheticGPRGenerator.__init__` line ~94 |
+| **`v_min / v_max`** | Subsurface propagation velocity (m/ns) | Water: ~0.033, Wet clay: 0.06-0.08, Soil: 0.08-0.13, Rock: 0.12-0.15 | `--v_min 0.08 --v_max 0.13` | `SyntheticGPRGenerator.__init__` line ~97 |
+| **`ringing_level`** | Multi-path reverberation level | `normal` (land/soil), `heavy` (water/lakebed surveys) | `--ringing_level heavy` | `generate_random_profile()` line ~135 |
 
 ---
 
@@ -214,23 +234,40 @@ We warmly welcome geophysicists and radar practitioners to share their domain in
 ## 🇨🇳 中文说明与项目背景
 
 ### 1. 跨界背景与核心设计哲学
-本项目作者具备**音频与阵列信号处理、神经网络应用研发**背景，并非地球物理专业科班出身。最初因有人提供了几组低信噪比（Low SNR）遗留 GPR 数据探讨潜在合作可能，作者出于技术探索兴趣，尝试运用信号处理与神经网络经验进行概念验证（PoC）。
+本项目作者具备**音频与阵列信号处理、神经网络应用研发**背景，并非地球物理专业科班出身。最初由合作方提供了一组**振铃（ringing）与多次波极其严重的水上/湖泊（Lake survey）雷达实测剖面**探讨潜在合作可能。由于水体、水底淤泥与基岩之间存在极大的介电常数跳变，严重的多次波混响在剖面上形成了密集的横向振铃条纹，深部真实的反射界面被死死遮掩。作者出于技术探索兴趣，尝试运用波动信号处理与神经网络经验进行概念验证（PoC）。
 
 在前期摸索阶段，作者曾尝试使用业界标准的数值模拟工具 **gprMax**（基于 FDTD 时域有限差分），但很快发现全波数值求解计算开销巨大，单张复杂剖面耗时漫长，难以支撑神经网络训练所需的庞大数据吞吐。
 
 后来通过人工观察大量实测 B-scan 剖面，从波动信号的直觉出发，作者感到地下反射双曲线与波前干涉在几何形态上非常类似于**“水面波纹的相干叠加”**。受此启发，作者抛弃了沉重的网格差分全波求解，转而采用基于**惠更斯原理（Huygens Principle）走时双曲线叠加与子波褶积的向量化简化仿真**。这种近似将单张剖面的生成时间从数十分钟缩短至**几毫秒**，从而奠定了“边生成边训练、数小时收敛”的基石。
 
 **本项目的核心工程价值不在于追求虚幻的“通用超大模型”，而在于实现极度敏捷的“轻量化快速定制、训练与边缘部署闭环”**：
-* **Hilbert 变换对抗巨大动态范围**：实测 GPR 剖面的动态范围往往跨越数个数量级（浅层天线直达波与地表强反射极其剧烈，而深层弱回波经过介质吸收和扩散后衰减严重）。如果直接把原始幅度喂给卷积网络，网络权重和损失梯度极易被浅层强能量绑架，深层弱信号直接被淹没。因此，算法通过沿时间/深度轴做 Hilbert 变换构造解析信号 $z(t) = s(t) + i\mathcal{H}[s(t)] = A(t)e^{i\phi(t)}$，并在进入 Stage 2 时除以瞬时振幅 $A(t)$，提取出单位相量 $(\cos\phi, \sin\phi) = (z_r/A, z_i/A)$。这在数学上完全剥离了随深度指数衰减的全局绝对能量尺度，让网络**将注意力从绝对振幅转移到介质边界处的“局部相位跳变”与横向测线上的“波前相干性”**。
+* **Hilbert 变换对抗巨大动态范围**：实测 GPR 剖面的动态范围往往跨越数个数量级（浅层天线直达波与水面强反射极其剧烈，而深层弱回波经过介质吸收和扩散后衰减严重）。如果直接把原始幅度喂给卷积网络，网络权重和损失梯度极易被浅层强能量绑架，深层弱信号直接被淹没。因此，算法通过沿时间/深度轴做 Hilbert 变换构造解析信号 $z(t) = s(t) + i\mathcal{H}[s(t)] = A(t)e^{i\phi(t)}$，并在进入 Stage 2 时除以瞬时振幅 $A(t)$，提取出单位相量 $(\cos\phi, \sin\phi) = (z_r/A, z_i/A)$。这在数学上完全剥离了随深度指数衰减的全局绝对能量尺度，让网络**将注意力从绝对振幅转移到介质边界处的“局部相位跳变”与横向测线上的“波前相干性”**。
 * **向量化惠更斯在线仿真（On-the-Fly Physics）**：彻底摆脱了预先离线生成几十 GB 庞大数据集的负担。在内存中通过多进程实时合成无限变化的地下波场流，边仿真边训练，网络永不重复学习死数据。
 * **低成本快速收敛**：在普通的消费级设备（如 **Mac mini M2, 24GB**）上，利用统一内存与 GPU/MPS 加速，**仅需几个小时即可完成训练收敛**。
 * **参数逼近原则**：仿真参数（时间步长 `dt`、中心频率 `freq`、道间距 `dx`）需要尽量逼近实际测区工况。模型对参数具备合理的宽容度，但若物理尺度严重失配（如波长或双曲线曲率相差一个数量级），可能导致重构异常。针对具体勘探频段快速微调并轻量化部署，远比纸上谈兵的通用性更具工程落地价值。
 * **坦诚求教**：这种“水波叠加”的惠更斯简化毕竟属于几何物理近似，难免忽略了高阶多次波以及复杂介质的频散特性。非常欢迎各位地球物理专家批评指正，探讨是否有兼顾极速吞吐与更高物理保真度的更好方案！
 
-### 2. 社区交流与实测观察
+### 2. 🏕️ 面向野外实测工作（Field Work）的推荐用法
+本架构非常适合有野外作业需求的地质工程或管线勘探人员尝试：
+1. **白天现场采集**：记录当前雷达的天线中心频率（$f_c$）、时间采样步长（$dt$）与测道间距（$dx$）；
+2. **晚上轻量设备训练**：在便携笔记本或 Mac mini 上启动 `train.py`，根据白天的参数快速对齐仿真生成器。由于波场完全在内存中实时合成，**2~3 小时左右即可完成收敛**，无需集群显卡；
+3. **现场即时增强与成图**：将当天的实测数据直接送入 `demo.py` 或 `app.py`，单条测线不到半秒出图，协助判断地层连续性并指导第二天的勘探或钻孔。
+
+### 3. 🔧 仿真参数在哪里修改？
+用户可通过命令行参数或在代码中快速调整物理仿真参数以匹配测区：
+
+| 参数名称 | 物理意义与典型地质场景 | 常见参数示例 | 命令行参数 (`train.py`) | 代码修改位置 (`train.py`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **`dt`** | 时间采样间隔 | `1.0e-9` (1 ns), `2.0e-9` (2 ns) | `--dt 2.0e-9` | `SyntheticGPRGenerator.__init__` line ~94 |
+| **`freq`** | 天线中心频率 | `100e6` (100 MHz), `500e6` (500 MHz) | `--freq 100e6` | `SyntheticGPRGenerator.__init__` line ~94 |
+| **`dx`** | 测道水平间距 (空间步长) | `0.05` (5 cm), `0.2` (20 cm), `1.0` (1 m) | `--dx 0.05` | `SyntheticGPRGenerator.__init__` line ~94 |
+| **`v_min / v_max`** | 介质电磁波速 (m/ns) | 水体:~0.033, 湿粘土:0.06-0.08, 干燥土层:0.08-0.13, 基岩:0.12-0.15 | `--v_min 0.08 --v_max 0.13` | `SyntheticGPRGenerator.__init__` line ~97 |
+| **`ringing_level`** | 多次波混响/振铃强度 | `normal` (常规陆地勘测), `heavy` (水上/湖泊雷达) | `--ringing_level heavy` | `generate_random_profile()` line ~135 |
+
+### 4. 社区交流与实测观察
 作者曾将部分初步效果分享至 Reddit 社区（参见 [r/geophysics 讨论](https://www.reddit.com/r/geophysics/comments/1r3f83m/showcase_automating_100mhz_gpr_signal_recovery_nn/)），引来部分业内同行的关注与测试交流。在一组粗采样（`dt=2ns, dx=1m`）的高噪声 100MHz 实测数据测试中，作者观察到实测波形中存在许多复杂的物理现象（如局部水平振铃跳跃、反射层尾波频散、道间不均匀响应等），这些现象很难仅凭通用的图像或信号先验去完整判读。
 
-### 3. 开源目的与交流期待
+### 5. 开源目的与交流期待
 作者深知自己**缺少实际的一线野外地质勘探与雷达工程应用经验**，对于实测数据中某些微弱特征究竟是真实地层界面、局部介质变化还是天线耦合干扰，缺乏专业的地质学解读能力，因此也不确定这些初步探索对专业社区究竟有多大参考价值。
 
 决定将整套算法流程、轻量 ONNX 权重（~3MB）和交互式 Demo 整理开源，主要是希望：

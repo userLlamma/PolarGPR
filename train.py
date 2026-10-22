@@ -83,14 +83,23 @@ class HuygensPropagatorCPU:
 class SyntheticGPRGenerator:
     """
     On-the-fly random subsurface geometry generator (layers, dipping faults, voids).
+    
+    ⚙️ FIELD CUSTOMIZATION:
+    Adjust parameters below (or pass via train.py CLI) to match your antenna & survey:
+    - dt: Time sampling interval (e.g. 1.0e-9 for 1ns, 2.0e-9 for 2ns)
+    - trace_spacing: Distance between traces in meters (e.g. 0.05m = 5cm, 1.0m)
+    - f_c: Antenna center frequency in Hz (e.g. 100e6 = 100MHz, 500e6 = 500MHz)
+    - velocity: Subsurface propagation speed in m/ns (Water: ~0.033, Soil: 0.08~0.13, Rock: 0.12~0.15)
+    - ringing_level: 'normal' for land surveys, 'heavy' for water/lakebed multi-path surveys
     """
-    def __init__(self, shape=(320, 512), dt=2.0e-9, trace_spacing=0.05, f_c=100e6):
+    def __init__(self, shape=(320, 512), dt=2.0e-9, trace_spacing=0.05, f_c=100e6, v_range=(0.08, 0.13), ringing_level="normal"):
         self.H, self.W = shape
         self.dt = dt
         self.trace_spacing = trace_spacing
         self.base_freq = f_c
-        # Average soil velocity ~0.1 m/ns
-        self.velocity = np.random.uniform(0.08, 0.13)
+        self.ringing_level = ringing_level
+        # Sample realistic velocity for the geological medium
+        self.velocity = np.random.uniform(v_range[0], v_range[1])
         self.propagator = HuygensPropagatorCPU(shape, self.dt, self.velocity, self.trace_spacing)
 
     def generate_random_profile(self):
@@ -124,6 +133,13 @@ class SyntheticGPRGenerator:
         # Direct wave coupling (shallow strong horizontal band)
         direct_wave = wav_clean[:min(len(wav_clean), self.H), None] * np.ones((1, self.W))
         bscan_noisy[:len(direct_wave), :] += direct_wave * np.random.uniform(1.5, 3.0)
+
+        # Multi-path reverberation / ringing (especially pronounced in lakebed/water radar surveys)
+        if self.ringing_level == "heavy":
+            ring_factor = np.random.uniform(0.3, 0.7)
+            reverb_shift = np.random.randint(8, 25)
+            bscan_noisy += ring_factor * np.roll(bscan_noisy, reverb_shift, axis=0)
+
         # Random Gaussian & speckle noise
         bscan_noisy += np.random.randn(self.H, self.W) * np.random.uniform(0.05, 0.2)
 
@@ -140,18 +156,27 @@ class SyntheticGPRGenerator:
 
 
 class OnTheFlyGPRDataset(Dataset):
-    def __init__(self, steps_per_epoch=200, shape=(320, 512), dt=2.0e-9, trace_spacing=0.05, f_c=100e6):
+    def __init__(self, steps_per_epoch=200, shape=(320, 512), dt=2.0e-9, trace_spacing=0.05, f_c=100e6, v_range=(0.08, 0.13), ringing_level="normal"):
         self.steps = steps_per_epoch
         self.shape = shape
         self.dt = dt
         self.trace_spacing = trace_spacing
         self.f_c = f_c
+        self.v_range = v_range
+        self.ringing_level = ringing_level
 
     def __len__(self):
         return self.steps
 
     def __getitem__(self, idx):
-        gen = SyntheticGPRGenerator(shape=self.shape, dt=self.dt, trace_spacing=self.trace_spacing, f_c=self.f_c)
+        gen = SyntheticGPRGenerator(
+            shape=self.shape,
+            dt=self.dt,
+            trace_spacing=self.trace_spacing,
+            f_c=self.f_c,
+            v_range=self.v_range,
+            ringing_level=self.ringing_level,
+        )
         x, y = gen.generate_random_profile()
         return torch.from_numpy(x).float(), torch.from_numpy(y).float()
 
@@ -177,6 +202,8 @@ def train_model(args):
         dt=args.dt,
         trace_spacing=args.dx,
         f_c=args.freq,
+        v_range=(args.v_min, args.v_max),
+        ringing_level=args.ringing_level,
     )
     loader = DataLoader(
         dataset,
@@ -243,7 +270,10 @@ if __name__ == "__main__":
     parser.add_argument("--width", type=int, default=512, help="B-scan width (traces)")
     parser.add_argument("--dt", type=float, default=2.0e-9, help="Sampling interval dt in seconds (e.g. 2.0e-9 for 2ns)")
     parser.add_argument("--dx", type=float, default=0.05, help="Trace spatial spacing in meters")
-    parser.add_argument("--freq", type=float, default=100e6, help="Antenna central frequency in Hz")
+    parser.add_argument("--freq", type=float, default=100e6, help="Antenna central frequency in Hz (e.g. 100e6 or 500e6)")
+    parser.add_argument("--v_min", type=float, default=0.08, help="Min medium velocity in m/ns (Water:~0.033, Soil:~0.08)")
+    parser.add_argument("--v_max", type=float, default=0.13, help="Max medium velocity in m/ns (Soil:~0.13, Rock:~0.15)")
+    parser.add_argument("--ringing_level", type=str, default="normal", choices=["normal", "heavy"], help="Ringing/multi-path level ('normal' or 'heavy' for water/lake surveys)")
     parser.add_argument("--workers", type=int, default=4, help="CPU workers for on-the-fly synthesis")
     parser.add_argument("--device", type=str, default=None, help="Device to use ('cpu', 'mps', 'cuda')")
     parser.add_argument("--output_dir", type=str, default="checkpoints", help="Save directory")
