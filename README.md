@@ -1,7 +1,7 @@
 <div align="center">
 
-# 📡 GPR Low-SNR Reflection Enhancer
-### Physics-Guided Phase Manifold & 2D Spatial Deep Feature Extraction for Legacy Ground Penetrating Radar Profiles
+# 📡 PolarGPR: Agile & Parameter-Tunable GPR Reflection Extraction
+### Lightweight Neural Reflection Layer Recovery with On-the-Fly Huygens Simulation (Wave Superposition, Hyperbolas & Trailing Coda)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
@@ -10,7 +10,7 @@
 [![ONNX Runtime](https://img.shields.io/badge/Runtime-ONNX_1.15%2B-orange.svg)](https://onnxruntime.ai/)
 [![Reddit Discussion](https://img.shields.io/badge/Reddit-r%2Fgeophysics-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/geophysics/comments/1r3f83m/showcase_automating_100mhz_gpr_signal_recovery_nn/)
 
-[English](README.md) | [中文说明](#-中文技术概要与项目故事)
+[English](README.md) | [中文说明](#-中文技术概要与项目背景)
 
 </div>
 
@@ -18,14 +18,21 @@
 
 ## 📖 Background & Motivation
 
-> *"An exploratory attempt by a signal processing developer to reconstruct low-SNR radar reflections, open-sourced for community reference and feedback."*
+> *"A lightweight, parameter-tunable reflection extraction model trainable in a few hours on consumer hardware (e.g. Mac mini), open-sourced for community reference and feedback."*
 
 ### 1. Project Origins & The Intuition Behind the Simulation
-I am a developer with a background in audio, array signal processing, and neural network application engineering—**not a trained geophysicist**. A few months ago, a contact shared a challenging set of water radar profiles from a **lake survey plagued by heavy multi-path ringing and reverberation** to explore potential collaboration. In such aquatic surveys, extreme dielectric contrasts between water, water-bottom sediment, and bedrock cause severe multiple reflections (ringing bands) that mask true structural horizons. Intrigued by the challenge of pulling genuine reflection layers out of heavy ringing clutter, I approached GPR B-scans from an acoustic wavefield perspective.
+I am a developer with a background in audio, array signal processing, and neural network application engineering—**not a trained geophysicist**. A few months ago, a contact shared a challenging set of water radar profiles from a **lake survey plagued by heavy multi-path ringing and reverberation** to explore potential collaboration. In such aquatic surveys, extreme dielectric contrasts between water, water-bottom sediment, and bedrock cause severe multiple reflections (ringing bands) that mask true structural horizons.
 
-During the exploratory phase, I initially tried using standard FDTD numerical tools like **gprMax**. However, full Maxwell-equation solvers proved far too computationally expensive—generating even a modest training set would take days or weeks. 
+Rather than pursuing an elusive "one-size-fits-all universal model," the core goal became building an **agile, lightweight workflow where physical simulation parameters can be easily tailored to target field requirements, trained in hours on consumer hardware, and immediately applied to inspect B-scans**.
 
-While visually inspecting B-scan radargrams, an intuition emerged: the macroscopic hyperbolic events, diffraction tails, and interference patterns strongly resembled **ripples propagating and interfering on a water surface**. Guided by this acoustic analogy, I pivoted from brute-force grid differencing to a simplified, vectorized **Huygens principle propagator** with analytical travel-time superposition and wavelet convolution. This reduced synthesis time from hours to milliseconds, enabling real-time on-the-fly streaming directly into PyTorch.
+During the exploratory phase, I initially tried full-wave numerical solvers like **gprMax**. However, FDTD differential solvers proved far too slow—synthesizing even a modest dataset took days or weeks. 
+
+While visually inspecting B-scan radargrams, an intuition emerged: the macroscopic hyperbolic events, diffraction tails, and interference patterns strongly resembled **ripples propagating and interfering on a water surface**. Guided by this acoustic analogy, I built a simplified, vectorized **Huygens principle propagator** that directly simulates three core physical elements:
+1. **Wavefront Superposition (波场干涉叠加)**: Simulating complex undulating layer interfaces and boundary interference.
+2. **Diffraction Hyperbolas (绕射与散射双曲线)**: Accurately modeling travel-time hyperbola geometry ($t = \sqrt{t_0^2 + 4x^2/v^2}$).
+3. **Trailing Coda Waves (主反射后的余波/振铃拖尾)**: Reproducing the variable-length oscillating reverberations that follow the primary reflection.
+
+This reduced synthesis time from hours to milliseconds, enabling real-time on-the-fly streaming directly into PyTorch without caching static datasets.
 
 While the preliminary results successfully recovered continuous reflection boundaries, the exploratory collaboration did not continue. Rather than shelving the code, I am open-sourcing the entire pipeline to share these observations with the community.
 
@@ -231,20 +238,20 @@ We warmly welcome geophysicists and radar practitioners to share their domain in
 
 ---
 
-## 🇨🇳 中文说明与项目背景
+## 🇨🇳 中文技术概要与项目背景
 
 ### 1. 跨界背景与核心设计哲学
-本项目作者具备**音频与阵列信号处理、神经网络应用研发**背景，并非地球物理专业科班出身。最初由合作方提供了一组**振铃（ringing）与多次波极其严重的水上/湖泊（Lake survey）雷达实测剖面**探讨潜在合作可能。由于水体、水底淤泥与基岩之间存在极大的介电常数跳变，严重的多次波混响在剖面上形成了密集的横向振铃条纹，深部真实的反射界面被死死遮掩。作者出于技术探索兴趣，尝试运用波动信号处理与神经网络经验进行概念验证（PoC）。
+本项目作者具备**音频与阵列信号处理、神经网络应用研发**背景，并非地球物理专业科班出身。最初由合作方提供了一组**振铃（ringing）与多次波极其严重的水上/湖泊（Lake survey）雷达实测剖面**探讨潜在合作可能。由于水体、水底淤泥与基岩之间存在极大的介电常数跳变，严重的多次波混响在剖面上形成了密集的横向振铃条纹，深部真实的反射界面被死死遮掩。
 
-在前期摸索阶段，作者曾尝试使用业界标准的数值模拟工具 **gprMax**（基于 FDTD 时域有限差分），但很快发现全波数值求解计算开销巨大，单张复杂剖面耗时漫长，难以支撑神经网络训练所需的庞大数据吞吐。
-
-后来通过人工观察大量实测 B-scan 剖面，从波动信号的直觉出发，作者感到地下反射双曲线与波前干涉在几何形态上非常类似于**“水面波纹的相干叠加”**。受此启发，作者抛弃了沉重的网格差分全波求解，转而采用基于**惠更斯原理（Huygens Principle）走时双曲线叠加与子波褶积的向量化简化仿真**。这种近似将单张剖面的生成时间从数十分钟缩短至**几毫秒**，从而奠定了“边生成边训练、数小时收敛”的基石。
-
-**本项目的核心工程价值不在于追求虚幻的“通用超大模型”，而在于实现极度敏捷的“轻量化快速定制、训练与边缘部署闭环”**：
-* **Hilbert 变换对抗巨大动态范围**：实测 GPR 剖面的动态范围往往跨越数个数量级（浅层天线直达波与水面强反射极其剧烈，而深层弱回波经过介质吸收和扩散后衰减严重）。如果直接把原始幅度喂给卷积网络，网络权重和损失梯度极易被浅层强能量绑架，深层弱信号直接被淹没。因此，算法通过沿时间/深度轴做 Hilbert 变换构造解析信号 $z(t) = s(t) + i\mathcal{H}[s(t)] = A(t)e^{i\phi(t)}$，并在进入 Stage 2 时除以瞬时振幅 $A(t)$，提取出单位相量 $(\cos\phi, \sin\phi) = (z_r/A, z_i/A)$。这在数学上完全剥离了随深度指数衰减的全局绝对能量尺度，让网络**将注意力从绝对振幅转移到介质边界处的“局部相位跳变”与横向测线上的“波前相干性”**。
-* **向量化惠更斯在线仿真（On-the-Fly Physics）**：彻底摆脱了预先离线生成几十 GB 庞大数据集的负担。在内存中通过多进程实时合成无限变化的地下波场流，边仿真边训练，网络永不重复学习死数据。
-* **低成本快速收敛**：在普通的消费级设备（如 **Mac mini M2, 24GB**）上，利用统一内存与 GPU/MPS 加速，**仅需几个小时即可完成训练收敛**。
-* **参数逼近原则**：仿真参数（时间步长 `dt`、中心频率 `freq`、道间距 `dx`）需要尽量逼近实际测区工况。模型对参数具备合理的宽容度，但若物理尺度严重失配（如波长或双曲线曲率相差一个数量级），可能导致重构异常。针对具体勘探频段快速微调并轻量化部署，远比纸上谈兵的通用性更具工程落地价值。
+**本项目的核心定位不是去拼一个虚幻的“通用超大模型”，而是打造一个【可以在轻量设备上自行修改物理仿真参数、几小时内快速完成训练并交付部署】的敏捷反射层提取工具**：
+* **摸索阶段的瓶颈**：在前期摸索阶段，作者曾尝试使用业界标准的数值模拟工具 **gprMax**（基于 FDTD 时域有限差分），但很快发现全波数值求解计算开销巨大，单张复杂剖面耗时漫长，难以支撑神经网络训练所需的庞大数据吞吐。
+* **从“水波相干叠加”获得的仿真直觉**：后来通过人工观察大量实测 B-scan 剖面，从波动信号的直觉出发，作者感到地下反射双曲线与波前干涉在几何形态上非常类似于**“水面波纹的相干叠加”**。受此启发，作者改用基于**惠更斯原理（Huygens Principle）走时近似与子波褶积的向量化轻量仿真**，在合成数据中显式刻画了三大核心物理现象：
+  1. **波场干涉叠加（Wave Superposition）**：模拟多层起伏地质界面的空间相干与波前干涉；
+  2. **绕射与散射双曲线（Hyperbolas）**：精准逼近走时双曲线几何曲率（$t = \sqrt{t_0^2 + 4x^2/v^2}$）；
+  3. **余波 / 拖尾（Trailing Coda Waves）**：地球物理与雷达领域常称为 **Coda waves（尾波 / 尾随波振铃拖尾）**，即主反射发生之后出现的长度不一、逐渐衰减的多周期混响震荡。
+* **向量化惠更斯在线仿真（On-the-Fly Physics）**：将生成时间缩短至几毫秒，彻底摆脱了预先离线生成几十 GB 庞大数据集的负担。在内存中通过多进程实时合成无限变化的地下波场流，边仿真边训练，网络永不重复学习死数据。
+* **低成本快速收敛**：在普通的消费级轻量设备（如 **Mac mini M2, 24GB**）上，利用统一内存与 GPU/MPS 加速，**仅需几个小时即可完成训练收敛**。
+* **Hilbert 变换对抗巨大动态范围**：实测 GPR 剖面的动态范围往往跨越数个数量级（浅层天线直达波与水面强反射极其剧烈，而深层弱回波衰减严重）。算法通过沿时间/深度轴做 Hilbert 变换构造解析信号 $z(t) = s(t) + i\mathcal{H}[s(t)] = A(t)e^{i\phi(t)}$，并在进入 Stage 2 时除以瞬时振幅 $A(t)$，提取出单位相量 $(\cos\phi, \sin\phi) = (z_r/A, z_i/A)$。这在数学上完全剥离了随深度指数衰减的全局绝对能量尺度，让网络**将注意力从绝对振幅转移到介质边界处的“局部相位跳变”与横向测线上的“波前相干性”**。
 * **坦诚求教**：这种“水波叠加”的惠更斯简化毕竟属于几何物理近似，难免忽略了高阶多次波以及复杂介质的频散特性。非常欢迎各位地球物理专家批评指正，探讨是否有兼顾极速吞吐与更高物理保真度的更好方案！
 
 ### 2. 🏕️ 面向野外实测工作（Field Work）的推荐用法
