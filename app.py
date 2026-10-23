@@ -17,17 +17,17 @@ from demo import load_bscan_file
 
 # Streamlit Page Setup
 st.set_page_config(
-    page_title="GPR Reflection Enhancer",
+    page_title="PolarGPR: Reflection Enhancer",
     page_icon="📡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.title("📡 GPR Low-SNR Reflection Enhancer")
+st.title("📡 PolarGPR: Agile Reflection Layer Extraction")
 st.markdown(
     """
     **Physics-guided instantaneous phase manifold & 2D spatial deep feature extraction** 
-    for low-SNR legacy Ground Penetrating Radar (GPR) B-scans.
+    for GPR reflection layer recovery under heavy ringing clutter.
     """
 )
 
