@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![Model Size: ~3MB](https://img.shields.io/badge/Model_Size-~3_MB-green.svg)]()
-[![Inference: <400ms (CPU)](https://img.shields.io/badge/CPU_Inference-%3C400ms-brightgreen.svg)]()
+[![Inference: ~340ms (512x400 CPU)](https://img.shields.io/badge/CPU_Inference-~340ms_(512%C3%97400)-brightgreen.svg)]()
 [![ONNX Runtime](https://img.shields.io/badge/Runtime-ONNX_1.15%2B-orange.svg)](https://onnxruntime.ai/)
 [![Reddit Discussion](https://img.shields.io/badge/Reddit-r%2Fgeophysics-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/geophysics/comments/1r3f83m/showcase_automating_100mhz_gpr_signal_recovery_nn/)
 
@@ -144,9 +144,12 @@ Engineered for resource-constrained field hardware, edge devices, and modest clo
 | Metric | Measured Value | Remarks |
 | :--- | :--- | :--- |
 | **Model Footprint** | **~3.0 MB** (`.onnx`) | Extremely lightweight |
-| **Mac (Apple Silicon CPU)** | **~340 ms** | 512 × 400 B-scan slice |
+| **Mac (Apple Silicon CPU)** | **~340 ms** | 512 × 400 B-scan slice (~200k samples) |
 | **1-Core Cloud VPS (ARM CPU)** | **~380 ms** | 100% CPU inference without GPU |
 | **Peak Memory Consumption** | **< 60 MB** | Zero GPU / VRAM requirements |
+
+> [!NOTE]
+> **Input Scale & Latency Scaling**: Because the network is fully convolutional (with dynamic spatial inputs), processing latency and memory scale linearly with profile dimensions ($N_t \times N_x$, Time Samples × Traces). A typical standard slice ($512 \times 400 \approx 200\text{k}$ samples) processes in ~340ms, while longer continuous survey profiles (e.g. 2,000+ traces) will scale proportionally.
 
 ---
 
@@ -156,8 +159,8 @@ Engineered for resource-constrained field hardware, edge devices, and modest clo
 Clone the repository and install the lightweight dependencies:
 
 ```bash
-git clone https://github.com/your-username/gpr-reflection-enhancer.git
-cd gpr-reflection-enhancer
+git clone https://github.com/userLlamma/PolarGPR.git
+cd PolarGPR
 pip install -r requirements.txt
 ```
 
@@ -258,7 +261,7 @@ We warmly welcome geophysicists and radar practitioners to share their domain in
 本架构非常适合有野外作业需求的地质工程或管线勘探人员尝试：
 1. **白天现场采集**：记录当前雷达的天线中心频率（$f_c$）、时间采样步长（$dt$）与测道间距（$dx$）；
 2. **晚上轻量设备训练**：在便携笔记本或 Mac mini 上启动 `train.py`，根据白天的参数快速对齐仿真生成器。由于波场完全在内存中实时合成，**2~3 小时左右即可完成收敛**，无需集群显卡；
-3. **现场即时增强与成图**：将当天的实测数据直接送入 `demo.py` 或 `app.py`，单条测线不到半秒出图，协助判断地层连续性并指导第二天的勘探或钻孔。
+3. **现场即时增强与成图**：将当天的实测数据直接送入 `demo.py` 或 `app.py`，单张标准切片（如 512×400，约 20 万样点）在普通 CPU 上约 300~400ms 即可完成推理成图（计算耗时与输入剖面样点规模 $N_t \times N_x$ 严格呈线性关系），协助判断地层连续性并指导第二天的勘探或钻孔。
 
 ### 3. 🔧 仿真参数在哪里修改？
 用户可通过命令行参数或在代码中快速调整物理仿真参数以匹配测区：
