@@ -1,7 +1,7 @@
 <div align="center">
 
-# 📡 PolarGPR: Agile & Parameter-Tunable GPR Reflection Extraction
-### Lightweight Neural Reflection Layer Recovery with On-the-Fly Huygens Simulation (Wave Superposition, Hyperbolas & Trailing Coda)
+# 📡 PolarGPR: Field-Trainable GPR Reflection Extraction on Consumer Hardware
+### Lightweight Neural Horizon Recovery with On-the-Fly Huygens Simulation (Trainable in Hours on a Mac mini)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
@@ -18,7 +18,7 @@
 
 ## 📖 Background & Motivation
 
-> *"A lightweight, parameter-tunable reflection extraction model trainable in a few hours on consumer hardware (e.g. Mac mini), open-sourced for community reference and feedback."*
+> *"A field-trainable reflection extraction model trainable in a few hours on consumer hardware (e.g. Mac mini), open-sourced for community reference and feedback."*
 
 ### 1. Project Origins & The Intuition Behind the Simulation
 I am a developer with a background in audio, array signal processing, and neural network application engineering—**not a trained geophysicist**. A few months ago, a contact shared a challenging set of water radar profiles from a **lake survey plagued by heavy multi-path ringing and reverberation** to explore potential collaboration. In such aquatic surveys, extreme dielectric contrasts between water, water-bottom sediment, and bedrock cause severe multiple reflections (ringing bands) that mask true structural horizons.
@@ -246,7 +246,7 @@ We warmly welcome geophysicists and radar practitioners to share their domain in
 ### 1. 跨界背景与核心设计哲学
 本项目作者具备**音频与阵列信号处理、神经网络应用研发**背景，并非地球物理专业科班出身。最初由合作方提供了一组**振铃（ringing）与多次波极其严重的水上/湖泊（Lake survey）雷达实测剖面**探讨潜在合作可能。由于水体、水底淤泥与基岩之间存在极大的介电常数跳变，严重的多次波混响在剖面上形成了密集的横向振铃条纹，深部真实的反射界面被死死遮掩。
 
-**本项目的核心定位不是去拼一个虚幻的“通用超大模型”，而是打造一个【可以在轻量设备上自行修改物理仿真参数、几小时内快速完成训练并交付部署】的敏捷反射层提取工具**：
+**本项目的核心定位不是去拼一个虚幻的“通用超大模型”，而是打造一个【面向野外实测、可在 Mac mini 等轻量设备上数小时内就地完成物理自适应训练】的原位现场训练（Field-Trainable / In-Situ）反射层提取工具**：
 * **摸索阶段的瓶颈**：在前期摸索阶段，作者曾尝试使用业界标准的数值模拟工具 **gprMax**（基于 FDTD 时域有限差分），但很快发现全波数值求解计算开销巨大，单张复杂剖面耗时漫长，难以支撑神经网络训练所需的庞大数据吞吐。
 * **从“水波相干叠加”获得的仿真直觉**：后来通过人工观察大量实测 B-scan 剖面，从波动信号的直觉出发，作者感到地下反射双曲线与波前干涉在几何形态上非常类似于**“水面波纹的相干叠加”**。受此启发，作者改用基于**惠更斯原理（Huygens Principle）走时近似与子波褶积的向量化轻量仿真**，在合成数据中显式刻画了三大核心物理现象：
   1. **波场干涉叠加（Wave Superposition）**：模拟多层起伏地质界面的空间相干与波前干涉；
